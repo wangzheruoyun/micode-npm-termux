@@ -1,7 +1,7 @@
 // tests/mindmodel/types.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
-import { parseManifest } from "../../src/mindmodel/types";
+import { parseManifest, parseConstraintFile } from "@/mindmodel/types";
 
 describe("mindmodel types", () => {
   it("should parse a valid manifest", () => {
@@ -71,7 +71,6 @@ categories:
 
 describe("ConstraintFileSchema", () => {
   it("should parse constraint file with rules, examples, and anti-patterns", () => {
-    const { parseConstraintFile } = require("../../src/mindmodel/types");
     const content = `# Error Handling
 
 ## Rules
@@ -104,7 +103,6 @@ if err != nil {
   });
 
   it("should handle constraint file with only rules", () => {
-    const { parseConstraintFile } = require("../../src/mindmodel/types");
     const content = `# Naming
 
 ## Rules

@@ -1,6 +1,7 @@
 // src/octto/session/server.ts
 
-import type { Server, ServerWebSocket } from "bun";
+import { createServer as createHttpServer, IncomingMessage, Server as HttpServer } from "node:http";
+import { WebSocketServer, WebSocket } from "ws";
 import * as v from "valibot";
 import { getHtmlBundle } from "@/octto/ui";
 import { config } from "@/utils/config";
@@ -14,84 +15,108 @@ interface WsData {
   sessionId: string;
 }
 
+interface ServerWithWs {
+  server: HttpServer;
+  wss: WebSocketServer;
+  port: number;
+  hostname?: string;
+  stop: () => Promise<void>;
+}
+
 export async function createServer(
   sessionId: string,
   store: SessionStore,
-): Promise<{ server: Server<WsData>; port: number }> {
+): Promise<{ server: ServerWithWs; port: number }> {
   const htmlBundle = getHtmlBundle();
 
-  const server = Bun.serve<WsData>({
-    port: 0, // Random available port
-    hostname: config.octto.allowRemoteBind ? config.octto.bindAddress : "127.0.0.1",
-    fetch(req, server) {
-      return handleFetch(req, server, sessionId, htmlBundle);
-    },
-    websocket: createWebSocketHandlers(store),
+  const httpServer = createHttpServer((req, res) => {
+    handleFetch(req, res, sessionId, htmlBundle);
   });
 
-  // Port is always defined when using port: 0
-  const port = server.port;
-  if (port === undefined) {
-    throw new Error("Failed to get server port");
-  }
+  const wss = new WebSocketServer({ noServer: true });
 
-  return {
-    server,
+  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    const url = new URL(req.url || "", `http://localhost`);
+    if (url.pathname === "/ws") {
+      ws.sessionId = sessionId;
+      store.handleWsConnect(sessionId, ws);
+      ws.on("close", () => store.handleWsDisconnect(sessionId));
+      ws.on("message", (message: Buffer) => handleWsMessage(ws, message, store));
+    } else {
+      ws.close(400, "Invalid path");
+    }
+  });
+
+  httpServer.on("upgrade", (req, socket, head) => {
+    const url = new URL(req.url || "", `http://localhost`);
+    if (url.pathname === "/ws") {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit("connection", ws, req);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
+  const hostname = config.octto.allowRemoteBind ? config.octto.bindAddress : "127.0.0.1";
+
+  await new Promise<void>((resolve, reject) => {
+    httpServer.listen({ port: 0, hostname }, (err?: Error) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+
+  const address = httpServer.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+  const serverHostname = typeof address === "object" && address ? address.address : "127.0.0.1";
+
+  const serverWithWs: ServerWithWs = {
+    server: httpServer,
+    wss,
     port,
+    hostname: serverHostname,
+    stop: () =>
+      new Promise<void>((resolve, reject) => {
+        wss.close((err) => {
+          if (err) reject(err);
+          else {
+            httpServer.close((err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          }
+        });
+      }),
   };
+
+  return { server: serverWithWs, port };
 }
 
 function handleFetch(
-  req: Request,
-  server: Server<WsData>,
+  req: IncomingMessage,
+  res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (data?: string) => void },
   sessionId: string,
   htmlBundle: string,
-): Response | undefined {
-  const url = new URL(req.url);
+): void {
+  const url = new URL(req.url || "", `http://localhost`);
 
-  // WebSocket upgrade
-  if (url.pathname === "/ws") {
-    const success = server.upgrade(req, {
-      data: { sessionId },
-    });
-    if (success) {
-      return undefined;
-    }
-    return new Response("WebSocket upgrade failed", { status: 400 });
-  }
+  // WebSocket upgrade is handled separately via httpServer.on("upgrade")
 
   // Serve the bundled HTML app
   if (url.pathname === "/" || url.pathname === "/index.html") {
-    return new Response(htmlBundle, {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-      },
-    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(htmlBundle);
+    return;
   }
 
-  return new Response("Not Found", { status: 404 });
+  res.writeHead(404);
+  res.end("Not Found");
 }
 
-function createWebSocketHandlers(store: SessionStore): {
-  open: (ws: ServerWebSocket<WsData>) => void;
-  close: (ws: ServerWebSocket<WsData>) => void;
-  message: (ws: ServerWebSocket<WsData>, message: string | Buffer) => void;
-} {
-  return {
-    open(ws: ServerWebSocket<WsData>) {
-      store.handleWsConnect(ws.data.sessionId, ws);
-    },
-    close(ws: ServerWebSocket<WsData>) {
-      store.handleWsDisconnect(ws.data.sessionId);
-    },
-    message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
-      handleWsMessage(ws, message, store);
-    },
-  };
-}
-
-function handleWsMessage(ws: ServerWebSocket<WsData>, message: string | Buffer, store: SessionStore): void {
-  const { sessionId } = ws.data;
+function handleWsMessage(ws: WebSocket & { sessionId?: string }, message: Buffer, store: SessionStore): void {
+  if (!ws.sessionId) return;
+  const sessionId = ws.sessionId;
 
   let raw: unknown;
   try {
@@ -122,4 +147,11 @@ function handleWsMessage(ws: ServerWebSocket<WsData>, message: string | Buffer, 
   }
 
   store.handleWsMessage(sessionId, result.output as WsClientMessage);
+}
+
+// Extend WebSocket type to include sessionId
+declare module "ws" {
+  interface WebSocket {
+    sessionId?: string;
+  }
 }

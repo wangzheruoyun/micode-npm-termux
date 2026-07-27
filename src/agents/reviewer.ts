@@ -119,7 +119,7 @@ You review ONE file. Keep review focused:
 **Status**: APPROVED / CHANGES REQUESTED
 
 **Test**: PASS / FAIL
-- Command: \`bun test path/to/test.ts\`
+- Command: \`npm test path/to/test.ts\`
 
 **Issues** (if CHANGES REQUESTED):
 1. \`file:line\` - [issue]

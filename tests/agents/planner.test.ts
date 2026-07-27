@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 describe("planner agent", () => {
   it("should use spawn_agent tool for subagent research", async () => {

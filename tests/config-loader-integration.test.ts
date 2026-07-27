@@ -1,5 +1,5 @@
 // tests/config-loader-integration.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { agents } from "../src/agents";
 import { mergeAgentConfigs } from "../src/config-loader";

@@ -52,7 +52,7 @@ You receive a prompt with:
 - Test path (e.g., "tests/lib/schema.test.ts")
 - Complete test code (copy-paste ready)
 - Complete implementation code (copy-paste ready)
-- Verify command (e.g., "bun test tests/lib/schema.test.ts")
+- Verify command (e.g., "npm test tests/lib/schema.test.ts")
 
 Your job: Write both files using the provided code, run the test, report result.
 </micro-task-input>
@@ -135,7 +135,7 @@ When plan doesn't exactly match reality, TRY TO ADAPT before escalating:
 - \`path/to/file.test.ts\`
 
 **Test result**: PASS / FAIL
-- Command: \`bun test path/to/file.test.ts\`
+- Command: \`npm test path/to/file.test.ts\`
 - Output: [relevant test output]
 
 **Status**: ✅ DONE / ❌ FAILED

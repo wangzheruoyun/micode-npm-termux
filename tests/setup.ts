@@ -1,22 +1,18 @@
-// tests/setup.ts
-import { afterEach, beforeEach } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { vi } from "vitest";
 
-// Global test directory for each test
-let testDir: string;
+// Mock bun:test globals
+globalThis.describe = describe;
+globalThis.it = it;
+globalThis.expect = expect;
+globalThis.beforeEach = beforeEach;
+globalThis.afterEach = afterEach;
+globalThis.spyOn = vi.spyOn;
 
-export function getTestDir(): string {
-  return testDir;
-}
+// Mock console methods
+vi.spyOn(console, "log").mockImplementation(() => {});
+vi.spyOn(console, "warn").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "debug").mockImplementation(() => {});
 
-beforeEach(() => {
-  testDir = mkdtempSync(join(tmpdir(), "opencode-test-"));
-});
-
-afterEach(() => {
-  if (testDir) {
-    rmSync(testDir, { recursive: true, force: true });
-  }
-});
+// Mock process.env for tests
+process.env.NODE_ENV = "test";

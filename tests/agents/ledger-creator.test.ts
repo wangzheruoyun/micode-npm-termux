@@ -1,5 +1,5 @@
 // tests/agents/ledger-creator.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { ledgerCreatorAgent } from "../../src/agents/ledger-creator";
 
 describe("ledgerCreatorAgent", () => {

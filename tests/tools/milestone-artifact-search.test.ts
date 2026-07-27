@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 describe("milestone-artifact-search tool", () => {
   it("defines milestone_id and artifact_type args", async () => {

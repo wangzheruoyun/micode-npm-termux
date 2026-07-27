@@ -1,5 +1,5 @@
 // tests/mindmodel/formatter.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { formatExamplesForInjection } from "../../src/mindmodel/formatter";
 import type { LoadedExample } from "../../src/mindmodel/loader";

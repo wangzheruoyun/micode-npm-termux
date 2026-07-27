@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/code-clusterer.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { codeClustererAgent } from "../../../src/agents/mindmodel/code-clusterer";
 

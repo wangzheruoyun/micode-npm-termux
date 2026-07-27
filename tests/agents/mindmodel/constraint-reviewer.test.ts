@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/constraint-reviewer.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { constraintReviewerAgent } from "../../../src/agents/mindmodel/constraint-reviewer";
 

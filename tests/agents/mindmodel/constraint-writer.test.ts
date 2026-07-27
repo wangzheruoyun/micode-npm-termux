@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/constraint-writer.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { constraintWriterAgent } from "../../../src/agents/mindmodel/constraint-writer";
 

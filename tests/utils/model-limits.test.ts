@@ -1,5 +1,5 @@
 // tests/utils/model-limits.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { DEFAULT_CONTEXT_LIMIT, getContextLimit, MODEL_CONTEXT_LIMITS } from "../../src/utils/model-limits";
 

@@ -1,5 +1,5 @@
 // tests/mindmodel/classifier.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { buildClassifierPrompt, parseClassifierResponse } from "../../src/mindmodel/classifier";
 import type { MindmodelManifest } from "../../src/mindmodel/types";

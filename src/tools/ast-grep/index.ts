@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin/tool";
-import { spawn, which } from "bun";
+import { spawn } from "node:child_process";
 import * as v from "valibot";
 
 /**
@@ -7,9 +7,15 @@ import * as v from "valibot";
  * Returns installation instructions if not found.
  */
 export async function checkAstGrepAvailable(): Promise<{ available: boolean; message?: string }> {
-  const sgPath = which("sg");
-  if (sgPath) {
-    return { available: true };
+  try {
+    // Use which command to check if sg exists
+    const { spawnSync } = await import("node:child_process");
+    const result = spawnSync("which", ["sg"], { stdio: "pipe" });
+    if (result.status === 0 && result.stdout.toString().trim()) {
+      return { available: true };
+    }
+  } catch {
+    // which command failed
   }
   return {
     available: false,
@@ -96,15 +102,31 @@ function parseMatchOutput(stdout: string): SgResult {
 
 async function runSg(args: string[]): Promise<SgResult> {
   try {
-    const proc = spawn(["sg", ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
+    const proc = spawn("sg", args, {
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
+      new Promise<string>((resolve, reject) => {
+        let data = "";
+        proc.stdout?.on("data", (chunk) => {
+          data += chunk.toString();
+        });
+        proc.stdout?.on("end", () => resolve(data));
+        proc.stdout?.on("error", reject);
+      }),
+      new Promise<string>((resolve, reject) => {
+        let data = "";
+        proc.stderr?.on("data", (chunk) => {
+          data += chunk.toString();
+        });
+        proc.stderr?.on("end", () => resolve(data));
+        proc.stderr?.on("error", reject);
+      }),
+      new Promise<number>((resolve, reject) => {
+        proc.on("close", (code) => resolve(code ?? 0));
+        proc.on("error", reject);
+      }),
     ]);
 
     const isNoFilesFound = exitCode !== 0 && !stdout.trim() && stderr.includes("No files found");

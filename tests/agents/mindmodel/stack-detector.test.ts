@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/stack-detector.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { stackDetectorAgent } from "../../../src/agents/mindmodel/stack-detector";
 

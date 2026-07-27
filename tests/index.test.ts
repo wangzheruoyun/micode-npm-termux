@@ -1,5 +1,5 @@
 // tests/index.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
 
 describe("index.ts constraint-reviewer integration", () => {

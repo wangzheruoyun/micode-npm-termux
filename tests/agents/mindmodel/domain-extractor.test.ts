@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/domain-extractor.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { domainExtractorAgent } from "../../../src/agents/mindmodel/domain-extractor";
 

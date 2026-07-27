@@ -242,7 +242,7 @@ All tasks in this batch have NO dependencies and run simultaneously.
 // COMPLETE implementation - copy-paste ready
 \`\`\`
 
-**Verify:** \`bun test tests/path/file.test.ts\`
+**Verify:** \`npm test tests/path/file.test.ts\`
 **Commit:** \`feat(scope): add file description\`
 
 ### Task 1.2: [Another independent file]
@@ -267,7 +267,7 @@ All tasks in this batch depend on Batch 1 completing.
 // COMPLETE implementation
 \`\`\`
 
-**Verify:** \`bun test tests/path/module.test.ts\`
+**Verify:** \`npm test tests/path/module.test.ts\`
 **Commit:** \`feat(scope): add module description\`
 
 ---

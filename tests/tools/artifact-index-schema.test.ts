@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 describe("artifact-index schema", () => {
   it("should not have handoff tables", async () => {

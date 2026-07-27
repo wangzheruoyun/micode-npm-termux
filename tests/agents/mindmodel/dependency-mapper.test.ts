@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/dependency-mapper.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { dependencyMapperAgent } from "../../../src/agents/mindmodel/dependency-mapper";
 

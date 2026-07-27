@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin/tool";
-import { spawn, which } from "bun";
+import { spawn } from "node:child_process";
 import { config } from "@/utils/config";
 import { extractErrorMessage } from "@/utils/errors";
 
@@ -8,24 +8,29 @@ import { extractErrorMessage } from "@/utils/errors";
  * Returns installation instructions if not found.
  */
 export async function checkBtcaAvailable(): Promise<{ available: boolean; message?: string }> {
-  const btcaPath = which("btca");
-  if (btcaPath) {
-    return { available: true };
+  try {
+    // Use which command to check if btca exists
+    const { spawnSync } = await import("node:child_process");
+    const result = spawnSync("which", ["btca"], { stdio: "pipe" });
+    if (result.status === 0 && result.stdout.toString().trim()) {
+      return { available: true };
+    }
+  } catch {
+    // which command failed
   }
   return {
     available: false,
     message:
       "btca CLI not found. Library source code search will not work.\n" +
       "Install from: https://github.com/davis7dotsh/better-context\n" +
-      "  bun add -g btca",
+      "  npm add -g btca",
   };
 }
 
 async function runBtca(args: string[]): Promise<{ output: string; error?: string }> {
   try {
-    const proc = spawn(["btca", ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
+    const proc = spawn("btca", args, {
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     // Create timeout promise
@@ -38,7 +43,21 @@ async function runBtca(args: string[]): Promise<{ output: string; error?: string
 
     // Race between process completion and timeout
     const [stdout, stderr, exitCode] = await Promise.race([
-      Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
+      new Promise<[string, string, number]>((resolve, reject) => {
+        let stdoutData = "";
+        let stderrData = "";
+
+        proc.stdout?.on("data", (chunk) => {
+          stdoutData += chunk.toString();
+        });
+        proc.stderr?.on("data", (chunk) => {
+          stderrData += chunk.toString();
+        });
+        proc.on("close", (code) => {
+          resolve([stdoutData, stderrData, code ?? 0]);
+        });
+        proc.on("error", reject);
+      }),
       timeoutPromise,
     ]);
 
@@ -54,7 +73,7 @@ async function runBtca(args: string[]): Promise<{ output: string; error?: string
       return {
         output: "",
         error:
-          "btca CLI not found. Install from: https://github.com/davis7dotsh/better-context\n" + "  bun add -g btca",
+          "btca CLI not found. Install from: https://github.com/davis7dotsh/better-context\n" + "  npm add -g btca",
       };
     }
     return { output: "", error: msg };

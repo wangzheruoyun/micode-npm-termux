@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/convention-extractor.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { conventionExtractorAgent } from "../../../src/agents/mindmodel/convention-extractor";
 

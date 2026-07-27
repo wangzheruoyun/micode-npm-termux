@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { primaryAgent } from "../../src/agents/commander";
 
 describe("commander agent", () => {

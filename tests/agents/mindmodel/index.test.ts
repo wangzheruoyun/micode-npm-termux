@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 // Test that all agents are exported from the index
 describe("mindmodel agents index", () => {

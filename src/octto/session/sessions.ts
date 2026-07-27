@@ -1,5 +1,5 @@
 // src/octto/session/sessions.ts
-import type { ServerWebSocket } from "bun";
+import type { WebSocket } from "ws";
 
 import { DEFAULT_ANSWER_TIMEOUT_MS } from "@/octto/constants";
 import { log } from "@/utils/logger";
@@ -41,7 +41,7 @@ export interface SessionStore {
   getNextAnswer: (input: GetNextAnswerInput) => Promise<GetNextAnswerOutput>;
   cancelQuestion: (questionId: string) => { ok: boolean };
   listQuestions: (sessionId?: string) => ListQuestionsOutput;
-  handleWsConnect: (sessionId: string, ws: ServerWebSocket<unknown>) => void;
+  handleWsConnect: (sessionId: string, ws: WebSocket & { sessionId?: string }) => void;
   handleWsDisconnect: (sessionId: string) => void;
   handleWsMessage: (sessionId: string, message: WsClientMessage) => void;
   getSession: (sessionId: string) => Session | undefined;
@@ -364,7 +364,7 @@ function collectQuestions(sessions: Map<string, Session>, sessionId?: string): L
   return { questions };
 }
 
-function onWsConnect(sessions: Map<string, Session>, sessionId: string, ws: ServerWebSocket<unknown>): void {
+function onWsConnect(sessions: Map<string, Session>, sessionId: string, ws: WebSocket & { sessionId?: string }): void {
   const session = sessions.get(sessionId);
   if (!session) return;
 

@@ -1,5 +1,5 @@
 // tests/mindmodel/review.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { parseReviewResponse } from "../../src/mindmodel/review";
 

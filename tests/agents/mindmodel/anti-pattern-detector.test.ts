@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/anti-pattern-detector.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { antiPatternDetectorAgent } from "../../../src/agents/mindmodel/anti-pattern-detector";
 

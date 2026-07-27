@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 describe("artifact-auto-index", () => {
   it("should not have handoff pattern or parsing", async () => {

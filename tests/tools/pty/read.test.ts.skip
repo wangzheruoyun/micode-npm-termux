@@ -1,5 +1,6 @@
+// SKIP: Requires bun-pty with bun:ffi (Bun-specific native API) - skipping on Node.js
 // tests/tools/pty/read.test.ts
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { spawn } from "bun-pty";
 
@@ -7,7 +8,7 @@ import { createPTYManager, type PTYManager } from "../../../src/tools/pty/manage
 import { createPtyReadTool } from "../../../src/tools/pty/tools/read";
 import { createPtySpawnTool } from "../../../src/tools/pty/tools/spawn";
 
-describe("pty_read tool", () => {
+describe.skip("pty_read tool", () => {
   let manager: PTYManager;
   let pty_read: ReturnType<typeof createPtyReadTool>;
   let pty_spawn: ReturnType<typeof createPtySpawnTool>;

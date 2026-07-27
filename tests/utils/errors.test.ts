@@ -1,5 +1,5 @@
 // tests/utils/errors.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 describe("errors utility", () => {
   describe("extractErrorMessage", () => {

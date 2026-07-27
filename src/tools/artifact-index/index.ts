@@ -1,13 +1,22 @@
 // src/tools/artifact-index/index.ts
-import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import initSqlJs, { Database } from "sql.js";
 
 const DEFAULT_DB_DIR = join(homedir(), ".config", "opencode", "artifact-index");
 const DB_NAME = "context.db";
 const ERR_DB_NOT_INITIALIZED = "Database not initialized";
 const DEFAULT_SEARCH_LIMIT = 10;
+
+let sqlPromise: Promise<{ Database: new (data?: Uint8Array) => Database }> | null = null;
+
+function getSqlJs(): Promise<{ Database: new (data?: Uint8Array) => Database }> {
+  if (!sqlPromise) {
+    sqlPromise = initSqlJs({ locateFile: () => "sql-wasm.wasm" });
+  }
+  return sqlPromise;
+}
 
 export interface PlanRecord {
   readonly id: string;
@@ -92,7 +101,6 @@ function getInlineSchema(): string {
 }
 
 function escapeFtsQuery(query: string): string {
-  // Escape special FTS5 characters and wrap terms in quotes
   return query
     .replace(/['"]/g, "")
     .split(/\s+/)
@@ -106,10 +114,25 @@ function requireDb(db: Database | null): Database {
   return db;
 }
 
+function saveDb(db: Database, dbPath: string): void {
+  const data = db.export();
+  writeFileSync(dbPath, Buffer.from(data));
+}
+
+function getFirstColumnValue(result: { columns: string[]; values: unknown[][] }, col: number = 0): unknown | null {
+  if (result.values.length > 0 && result.values[0].length > col) {
+    return result.values[0][col];
+  }
+  return null;
+}
+
 function indexPlanInDb(db: Database, record: PlanRecord): void {
-  const existing = db.query<{ id: string }, [string]>(`SELECT id FROM plans WHERE file_path = ?`).get(record.filePath);
-  if (existing) {
-    db.run(`DELETE FROM plans_fts WHERE id = ?`, [existing.id]);
+  const existing = db.exec(`SELECT id FROM plans WHERE file_path = ?`, [record.filePath]);
+  if (existing.length > 0) {
+    const id = getFirstColumnValue(existing[0]);
+    if (id) {
+      db.run(`DELETE FROM plans_fts WHERE id = ?`, [id as string]);
+    }
   }
 
   db.run(
@@ -131,11 +154,12 @@ function indexPlanInDb(db: Database, record: PlanRecord): void {
 }
 
 function indexLedgerInDb(db: Database, record: LedgerRecord): void {
-  const existing = db
-    .query<{ id: string }, [string]>(`SELECT id FROM ledgers WHERE file_path = ?`)
-    .get(record.filePath);
-  if (existing) {
-    db.run(`DELETE FROM ledgers_fts WHERE id = ?`, [existing.id]);
+  const existing = db.exec(`SELECT id FROM ledgers WHERE file_path = ?`, [record.filePath]);
+  if (existing.length > 0) {
+    const id = getFirstColumnValue(existing[0]);
+    if (id) {
+      db.run(`DELETE FROM ledgers_fts WHERE id = ?`, [id as string]);
+    }
   }
 
   db.run(
@@ -168,45 +192,47 @@ function indexLedgerInDb(db: Database, record: LedgerRecord): void {
 }
 
 function searchPlans(db: Database, escapedQuery: string, limit: number): SearchResult[] {
-  const plans = db
-    .query<{ id: string; file_path: string; title: string; rank: number }, [string, number]>(`
-    SELECT p.id, p.file_path, p.title, rank
-    FROM plans_fts
-    JOIN plans p ON plans_fts.id = p.id
-    WHERE plans_fts MATCH ?
-    ORDER BY rank
-    LIMIT ?
-  `)
-    .all(escapedQuery, limit);
+  const plans = db.exec(
+    `SELECT p.id, p.file_path, p.title, rank
+     FROM plans_fts
+     JOIN plans p ON plans_fts.id = p.id
+     WHERE plans_fts MATCH ?
+     ORDER BY rank
+     LIMIT ?`,
+    [escapedQuery, limit],
+  );
 
-  return plans.map((row) => ({
+  if (plans.length === 0) return [];
+
+  return plans[0].values.map((row) => ({
     type: "plan" as const,
-    id: row.id,
-    filePath: row.file_path,
-    title: row.title,
-    score: -row.rank,
+    id: row[0] as string,
+    filePath: row[1] as string,
+    title: row[2] as string | undefined,
+    score: -(row[3] as number),
   }));
 }
 
 function searchLedgers(db: Database, escapedQuery: string, limit: number): SearchResult[] {
-  const ledgers = db
-    .query<{ id: string; file_path: string; session_name: string; goal: string; rank: number }, [string, number]>(`
-    SELECT l.id, l.file_path, l.session_name, l.goal, rank
-    FROM ledgers_fts
-    JOIN ledgers l ON ledgers_fts.id = l.id
-    WHERE ledgers_fts MATCH ?
-    ORDER BY rank
-    LIMIT ?
-  `)
-    .all(escapedQuery, limit);
+  const ledgers = db.exec(
+    `SELECT l.id, l.file_path, l.session_name, l.goal, rank
+     FROM ledgers_fts
+     JOIN ledgers l ON ledgers_fts.id = l.id
+     WHERE ledgers_fts MATCH ?
+     ORDER BY rank
+     LIMIT ?`,
+    [escapedQuery, limit],
+  );
 
-  return ledgers.map((row) => ({
+  if (ledgers.length === 0) return [];
+
+  return ledgers[0].values.map((row) => ({
     type: "ledger" as const,
-    id: row.id,
-    filePath: row.file_path,
-    title: row.session_name,
-    summary: row.goal,
-    score: -row.rank,
+    id: row[0] as string,
+    filePath: row[1] as string,
+    title: row[2] as string | undefined,
+    summary: row[3] as string | undefined,
+    score: -(row[4] as number),
   }));
 }
 
@@ -228,47 +254,51 @@ function searchMilestoneArtifactsInDb(
   artifactType: string | null,
   limit: number,
 ): MilestoneArtifactSearchResult[] {
-  const rows = db
-    .query<MilestoneRow, [string, string | null, string | null, string | null, string | null, number]>(
-      `SELECT
-        milestone_artifacts.id,
-        milestone_artifacts.milestone_id,
-        milestone_artifacts.artifact_type,
-        milestone_artifacts.source_session_id,
-        milestone_artifacts.created_at,
-        milestone_artifacts.tags,
-        milestone_artifacts.payload,
-        milestone_artifacts_fts.rank
-      FROM milestone_artifacts_fts
-      JOIN milestone_artifacts ON milestone_artifacts.id = milestone_artifacts_fts.id
-      WHERE milestone_artifacts_fts MATCH ?
-        AND (? IS NULL OR milestone_artifacts.milestone_id = ?)
-        AND (? IS NULL OR milestone_artifacts.artifact_type = ?)
-      ORDER BY milestone_artifacts_fts.rank
-      LIMIT ?`,
-    )
-    .all(escapedQuery, milestoneId, milestoneId, artifactType, artifactType, limit);
+  const rows = db.exec(
+    `SELECT
+      milestone_artifacts.id,
+      milestone_artifacts.milestone_id,
+      milestone_artifacts.artifact_type,
+      milestone_artifacts.source_session_id,
+      milestone_artifacts.created_at,
+      milestone_artifacts.tags,
+      milestone_artifacts.payload,
+      milestone_artifacts_fts.rank
+    FROM milestone_artifacts_fts
+    JOIN milestone_artifacts ON milestone_artifacts.id = milestone_artifacts_fts.id
+    WHERE milestone_artifacts_fts MATCH ?
+      AND (? IS NULL OR milestone_artifacts.milestone_id = ?)
+      AND (? IS NULL OR milestone_artifacts.artifact_type = ?)
+    ORDER BY milestone_artifacts_fts.rank
+    LIMIT ?`,
+    [escapedQuery, milestoneId, milestoneId, artifactType, artifactType, limit],
+  );
 
-  return rows.map((row) => ({
+  if (rows.length === 0) return [];
+
+  return rows[0].values.map((row) => ({
     type: "milestone" as const,
-    id: row.id,
-    milestoneId: row.milestone_id,
-    artifactType: row.artifact_type,
-    sourceSessionId: row.source_session_id ?? undefined,
-    createdAt: row.created_at ?? undefined,
-    tags: row.tags ? (JSON.parse(row.tags) as string[]) : [],
-    payload: row.payload,
-    score: -row.rank,
+    id: row[0] as string,
+    milestoneId: row[1] as string,
+    artifactType: row[2] as string,
+    sourceSessionId: row[3] as string | undefined,
+    createdAt: row[4] as string | undefined,
+    tags: row[5] ? (JSON.parse(row[5] as string) as string[]) : [],
+    payload: row[6] as string,
+    score: -(row[7] as number),
   }));
 }
 
 function indexMilestoneArtifactInDb(db: Database, record: MilestoneArtifactRecord): void {
   const tags = JSON.stringify(record.tags ?? []);
   const createdAt = record.createdAt ?? new Date().toISOString();
-  const existing = db.query<{ id: string }, [string]>("SELECT id FROM milestone_artifacts WHERE id = ?").get(record.id);
+  const existing = db.exec(`SELECT id FROM milestone_artifacts WHERE id = ?`, [record.id]);
 
-  if (existing) {
-    db.run("DELETE FROM milestone_artifacts_fts WHERE id = ?", [existing.id]);
+  if (existing.length > 0) {
+    const id = getFirstColumnValue(existing[0]);
+    if (id) {
+      db.run(`DELETE FROM milestone_artifacts_fts WHERE id = ?`, [id as string]);
+    }
   }
 
   db.run(
@@ -316,50 +346,58 @@ export interface ArtifactIndex {
   close(): Promise<void>;
 }
 
-function initializeDb(dbPath: string): Database {
-  const dir = dirname(dbPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-
-  const database = new Database(dbPath);
-  const schemaPath = join(dirname(import.meta.path), "schema.sql");
-  let schema: string;
-  try {
-    schema = readFileSync(schemaPath, "utf-8");
-  } catch {
-    schema = getInlineSchema();
-  }
-  database.exec(schema);
-  return database;
-}
-
-function searchAll(activeDb: Database, query: string, limit: number): SearchResult[] {
-  const escapedQuery = escapeFtsQuery(query);
-  const results = [...searchPlans(activeDb, escapedQuery, limit), ...searchLedgers(activeDb, escapedQuery, limit)];
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
-}
-
-export function createArtifactIndex(dbDir: string = DEFAULT_DB_DIR): ArtifactIndex {
+export async function createArtifactIndex(dbDir: string = DEFAULT_DB_DIR): Promise<ArtifactIndex> {
+  const SQL = await getSqlJs();
   let db: Database | null = null;
   const dbPath = join(dbDir, DB_NAME);
 
+  async function initializeDb(): Promise<void> {
+    const dir = dirname(dbPath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+
+    if (existsSync(dbPath)) {
+      const fileBuffer = readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer);
+    } else {
+      db = new SQL.Database();
+    }
+
+    const schemaPath = join(dirname(import.meta.url), "schema.sql");
+    let schema: string;
+    try {
+      schema = readFileSync(schemaPath, "utf-8");
+    } catch {
+      schema = getInlineSchema();
+    }
+    db.exec(schema);
+  }
+
   return {
     async initialize(): Promise<void> {
-      db = initializeDb(dbPath);
+      await initializeDb();
     },
     async indexPlan(record: PlanRecord): Promise<void> {
       indexPlanInDb(requireDb(db), record);
+      saveDb(requireDb(db), dbPath);
     },
     async indexLedger(record: LedgerRecord): Promise<void> {
       indexLedgerInDb(requireDb(db), record);
+      saveDb(requireDb(db), dbPath);
     },
     async search(query: string, limit: number = DEFAULT_SEARCH_LIMIT): Promise<SearchResult[]> {
-      return searchAll(requireDb(db), query, limit);
+      const escapedQuery = escapeFtsQuery(query);
+      const results = [
+        ...searchPlans(requireDb(db), escapedQuery, limit),
+        ...searchLedgers(requireDb(db), escapedQuery, limit),
+      ];
+      results.sort((a, b) => b.score - a.score);
+      return results.slice(0, limit);
     },
     async indexMilestoneArtifact(record: MilestoneArtifactRecord): Promise<void> {
       indexMilestoneArtifactInDb(requireDb(db), record);
+      saveDb(requireDb(db), dbPath);
     },
     async searchMilestoneArtifacts(
       query: string,
@@ -387,7 +425,7 @@ let globalIndex: ArtifactIndex | null = null;
 
 export async function getArtifactIndex(): Promise<ArtifactIndex> {
   if (!globalIndex) {
-    globalIndex = createArtifactIndex();
+    globalIndex = await createArtifactIndex();
     await globalIndex.initialize();
   }
   return globalIndex;

@@ -1,5 +1,5 @@
 // tests/agents/mindmodel/pattern-discoverer.test.ts
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { mindmodelPatternDiscovererAgent } from "../../../src/agents/mindmodel/pattern-discoverer";
 

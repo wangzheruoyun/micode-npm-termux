@@ -163,7 +163,7 @@ Use `"model": "github-copilot/gpt-5-mini"` (not `github/copilot:gpt-5-mini`).
 
 ```bash
 git clone git@github.com:vtemian/micode.git ~/.micode
-cd ~/.micode && bun install && bun run build
+cd ~/.micode && npm install && npm run build
 ```
 
 ```json
