@@ -228,18 +228,19 @@ function searchPlans(db: Database, escapedQuery: string, limit: number): SearchR
      LIMIT ?`,
   );
   stmt.bind([escapedQuery, limit]);
-  const row = stmt.get();
+  const results: SearchResult[] = [];
+  while (stmt.step()) {
+    const row = stmt.get();
+    results.push({
+      type: "plan" as const,
+      id: row[0] as string,
+      filePath: row[1] as string,
+      title: row[2] as string | undefined,
+      score: -(row[3] as number),
+    });
+  }
   stmt.free();
-
-  if (!row || row[0] == null) return [];
-
-  return [{
-    type: "plan" as const,
-    id: row[0] as string,
-    filePath: row[1] as string,
-    title: row[2] as string | undefined,
-    score: -(row[3] as number),
-  }];
+  return results;
 }
 
 function searchLedgers(db: Database, escapedQuery: string, limit: number): SearchResult[] {
@@ -252,19 +253,20 @@ function searchLedgers(db: Database, escapedQuery: string, limit: number): Searc
      LIMIT ?`,
   );
   stmt.bind([escapedQuery, limit]);
-  const row = stmt.get();
+  const results: SearchResult[] = [];
+  while (stmt.step()) {
+    const row = stmt.get();
+    results.push({
+      type: "ledger" as const,
+      id: row[0] as string,
+      filePath: row[1] as string,
+      title: row[2] as string | undefined,
+      summary: row[3] as string | undefined,
+      score: -(row[4] as number),
+    });
+  }
   stmt.free();
-
-  if (!row || row[0] == null) return [];
-
-  return [{
-    type: "ledger" as const,
-    id: row[0] as string,
-    filePath: row[1] as string,
-    title: row[2] as string | undefined,
-    summary: row[3] as string | undefined,
-    score: -(row[4] as number),
-  }];
+  return results;
 }
 
 interface MilestoneRow {

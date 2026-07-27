@@ -165,7 +165,7 @@ Migrated from Bun to Node.js + npm for broader platform compatibility (including
 - **Package manager**: `bun install` → `npm install`
 - **Test runner**: `bun test` → `vitest` (compatible with `bun:test` APIs)
 - **Build**: `bun build` → `tsc --project tsconfig.build.json`
-- **Database**: `better-sqlite3` → `sql.js` (WASM SQLite) for cross-platform support (FTS5 not available in standard WASM build)
+- **Database**: `better-sqlite3` → `fts5-sql-bundle` (WASM SQLite with FTS5) for cross-platform support
 - **WebSocket**: `Bun.serve` → `ws` library with Node.js HTTP server
 - **File I/O**: `Bun.write`, `Bun.file` → `node:fs/promises`
 - **Process spawn**: `Bun.spawn` → `node:child_process.spawn`
@@ -187,4 +187,3 @@ Migrated from Bun to Node.js + npm for broader platform compatibility (including
 - **Type-only imports** — must use `import type` or Biome will error
 - **Circular imports** — avoid `../` imports; use `@/` aliases
 - **Valibot schemas** — use `v.pipe` for chains; treat parse failures as warnings where possible
-- **FTS5 unavailable** — SQL.js WASM doesn't include FTS5; use better-sqlite3 on supported platforms
