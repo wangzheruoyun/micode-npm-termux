@@ -6,5 +6,5 @@ export { look_at } from "./look-at";
 export { milestone_artifact_search } from "./milestone-artifact-search";
 export { createMindmodelLookupTool } from "./mindmodel-lookup";
 export { createOcttoTools, createSessionStore } from "./octto";
-export { createPTYManager, createPtyTools, loadBunPty } from "./pty";
+export { createPTYManager, createPtyTools, loadZigPty, isZigPtyAvailable, getZigPtyLoadError } from "./pty";
 export { createSpawnAgentTool } from "./spawn-agent";

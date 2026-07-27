@@ -1,14 +1,8 @@
 // src/tools/pty/pty-loader.ts
-// Resolves bun-pty native library path and loads bun-pty with graceful degradation.
+// Resolves zigpty native library path and loads zigpty with graceful degradation.
 //
-// bun-pty's resolveLibPath() checks BUN_PTY_LIB env var first, then hardcoded paths
-// relative to import.meta.url. When micode is installed as an OpenCode plugin,
-// the library ends up in .opencode/node_modules/bun-pty/... which isn't in the
-// hardcoded search paths. We fix this by probing likely locations and setting
-// BUN_PTY_LIB before the dynamic import.
-//
-// See: https://github.com/vtemian/micode/issues/20
-// See: https://github.com/anomalyco/opencode/issues/10556
+// zigpty is a Zig-based PTY library with prebuilt binaries for Linux, macOS, Windows, and Android.
+// It automatically falls back to a pure-TypeScript pipe-based PTY when native bindings can't load.
 
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,106 +12,94 @@ import { log } from "@/utils/logger";
 
 const LOG_TAG = "pty.loader";
 
-type BunPtyModule = typeof import("bun-pty");
+type ZigPtyModule = typeof import("zigpty");
 
-let ptyModule: BunPtyModule | null = null;
+let ptyModule: ZigPtyModule | null = null;
 let loadAttempted = false;
 let loadError: string | null = null;
 
 function resolveNativeLibNames(platform: string, arch: string): string[] {
   if (platform === "darwin") {
-    return arch === "arm64" ? ["librust_pty_arm64.dylib", "librust_pty.dylib"] : ["librust_pty.dylib"];
+    return arch === "arm64" ? ["libzigpty_arm64.dylib", "libzigpty.dylib"] : ["libzigpty.dylib"];
   }
   if (platform === "win32") {
-    return ["rust_pty.dll"];
+    return ["zigpty.dll"];
   }
-  return arch === "arm64" ? ["librust_pty_arm64.so", "librust_pty.so"] : ["librust_pty.so"];
+  return arch === "arm64" ? ["libzigpty_arm64.so", "libzigpty.so"] : ["libzigpty.so"];
 }
 
 /**
- * Probe additional paths where the bun-pty native library might live,
- * beyond what bun-pty checks itself. Sets BUN_PTY_LIB if found.
+ * Probe additional paths where the zigpty native library might live.
  */
-function probeBunPtyLib(): void {
-  // If already set by user, respect it
-  if (process.env.BUN_PTY_LIB) return;
+function probeZigPtyLib(): void {
+  if (process.env.ZIGPTY_LIB) return;
 
   const platform = process.platform;
   const arch = process.arch;
-
   const filenames = resolveNativeLibNames(platform, arch);
-
   const cwd = process.cwd();
 
-  // Paths that bun-pty does NOT check but where the lib may exist
-  // when installed as an OpenCode plugin dependency
   const additionalBasePaths = [
-    // .opencode/node_modules/bun-pty/... (plugin installed via .opencode/package.json)
-    join(cwd, ".opencode", "node_modules", "bun-pty", "rust-pty", "target", "release"),
-    // .micode/node_modules/bun-pty/... (if micode has its own node_modules)
-    join(cwd, ".micode", "node_modules", "bun-pty", "rust-pty", "target", "release"),
+    join(cwd, ".opencode", "node_modules", "zigpty", "zig-out", "lib"),
+    join(cwd, ".micode", "node_modules", "zigpty", "zig-out", "lib"),
   ];
 
-  // Also try resolving from require.resolve if available
   try {
-    const bunPtyMain = require.resolve("bun-pty");
-    if (bunPtyMain) {
-      // require.resolve gives us something like .../node_modules/bun-pty/src/index.ts
-      // Go up to the bun-pty package root
-      const pkgDir = dirname(dirname(bunPtyMain));
-      additionalBasePaths.unshift(join(pkgDir, "rust-pty", "target", "release"));
+    const zigPtyMain = require.resolve("zigpty");
+    if (zigPtyMain) {
+      const pkgDir = dirname(dirname(zigPtyMain));
+      additionalBasePaths.unshift(join(pkgDir, "zig-out", "lib"));
     }
   } catch {
-    // require.resolve may fail in some environments
+    // ignore
   }
 
   const candidates = additionalBasePaths.flatMap((basePath) => filenames.map((f) => join(basePath, f)));
   const found = candidates.find((c) => existsSync(c));
   if (found) {
-    process.env.BUN_PTY_LIB = found;
-    log.info(LOG_TAG, `Auto-resolved BUN_PTY_LIB=${found}`);
+    process.env.ZIGPTY_LIB = found;
+    log.info(LOG_TAG, `Auto-resolved ZIGPTY_LIB=${found}`);
   }
 }
 
 /**
- * Dynamically load bun-pty with graceful degradation.
- * Sets BUN_PTY_LIB env var before import to fix path resolution
+ * Dynamically load zigpty with graceful degradation.
+ * Sets ZIGPTY_LIB env var before import to fix path resolution
  * in OpenCode plugin environments.
  *
- * Returns null if bun-pty cannot be loaded (native library missing, etc.)
+ * Returns null if zigpty cannot be loaded (native library missing, etc.)
+ * The library itself falls back to a pure-TypeScript pipe-based PTY.
  */
-export async function loadBunPty(): Promise<BunPtyModule | null> {
+export async function loadZigPty(): Promise<ZigPtyModule | null> {
   if (loadAttempted) return ptyModule;
   loadAttempted = true;
 
-  // Probe and set BUN_PTY_LIB before importing
-  probeBunPtyLib();
+  probeZigPtyLib();
 
   try {
-    ptyModule = await import("bun-pty");
-    log.info(LOG_TAG, "bun-pty loaded successfully");
+    ptyModule = await import("zigpty");
+    log.info(LOG_TAG, "zigpty loaded successfully");
     return ptyModule;
   } catch (error) {
     loadError = extractErrorMessage(error);
-    // Extract just the first line for a cleaner warning
     const firstLine = loadError.split("\n")[0];
-    log.warn(LOG_TAG, `bun-pty unavailable: ${firstLine}`);
-    log.warn(LOG_TAG, "PTY tools will be disabled. Set BUN_PTY_LIB env var to the native library path to fix.");
+    log.warn(LOG_TAG, `zigpty unavailable: ${firstLine}`);
+    log.warn(LOG_TAG, "PTY tools will use pipe fallback. Set ZIGPTY_LIB env var to the native library path to fix.");
     ptyModule = null;
     return null;
   }
 }
 
 /**
- * Check if bun-pty is available (must call loadBunPty first).
+ * Check if zigpty native bindings are available (must call loadZigPty first).
  */
-export function isBunPtyAvailable(): boolean {
+export function isZigPtyAvailable(): boolean {
   return ptyModule !== null;
 }
 
 /**
  * Get the load error message, if any.
  */
-export function getBunPtyLoadError(): string | null {
+export function getZigPtyLoadError(): string | null {
   return loadError;
 }

@@ -101,9 +101,9 @@ git push --follow-tags # triggers release.yml
 ## Key Dependencies
 - `@opencode-ai/plugin:1.14.19` - Plugin SDK
 - `valibot:^1.2.0` - Schema validation
-- `bun-pty:^0.4.5` - PTY for executor worktrees (external in build)
+- `zigpty:^0.1.0` - Cross-platform PTY in Zig (Android/Termux support, graceful fallback)
 - `jsonc-parser:^3.3.1` - JSONC config parsing
-- `sql.js:^1.10.0` - SQLite WASM for artifact indexing (replaces better-sqlite3)
+- `fts5-sql-bundle:^1.0.0` - SQL.js with FTS5 full-text search (replaces sql.js)
 - `ws:^8.18.0` - WebSocket server for octto browser UI
 - `yaml:^2.8.2` - YAML parsing for mindmodel
 
@@ -172,8 +172,8 @@ Migrated from Bun to Node.js + npm for broader platform compatibility (including
 - **Timer/Event APIs**: `Bun.*` globals → Node.js equivalents
 
 **Skipped/Blocked features (documented for future):**
-- **bun-pty**: Native PTY requires Bun's `bun:ffi` - not available on Node.js. PTY tests skipped.
-- **FTS5 full-text search**: Not available in sql.js WASM build (requires custom SQLite compilation). Related tests skipped.
+- **bun-pty**: Native PTY requires Bun's `bun:ffi` - not available on Node.js. **Replaced with zigpty** (2026-07-28) — cross-platform PTY in Zig with native Android/Termux support and graceful fallback to pure-TypeScript pipe-based PTY when native bindings unavailable. See [zigpty](https://github.com/pithings/zigpty).
+- **FTS5 full-text search**: Not available in sql.js WASM build (requires custom SQLite compilation). **Replaced with fts5-sql-bundle** (2026-07-28) — drop-in SQL.js replacement with FTS5 enabled via custom Emscripten build. See [fts5-sql-bundle](https://www.npmjs.com/package/fts5-sql-bundle).
 - **lefthook pre-commit**: Binary not available on Android/Termux - prepare script skipped.
 
 **ESLint config updates:**

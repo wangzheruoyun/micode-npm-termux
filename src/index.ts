@@ -34,7 +34,7 @@ import {
   createPtyTools,
   createSessionStore,
   createSpawnAgentTool,
-  loadBunPty,
+  loadZigPty,
   look_at,
   milestone_artifact_search,
 } from "@/tools";
@@ -211,13 +211,13 @@ const OpenCodeConfigPlugin: Plugin = async (ctx) => {
     }
   });
 
-  // PTY System - load bun-pty with graceful degradation
-  // Sets BUN_PTY_LIB env var to fix path resolution in OpenCode plugin environments
-  // See: https://github.com/vtemian/micode/issues/20
+  // PTY System - load zigpty with graceful degradation
+  // Sets ZIGPTY_LIB env var to fix path resolution in OpenCode plugin environments
+  // zigpty falls back to pure-TypeScript pipe-based PTY when native bindings unavailable
   const ptyManager = createPTYManager();
-  const bunPty = await loadBunPty();
-  if (bunPty) {
-    ptyManager.init(bunPty.spawn);
+  const zigPty = await loadZigPty();
+  if (zigPty) {
+    ptyManager.init(zigPty.spawn);
   }
   const ptyTools = ptyManager.available ? createPtyTools(ptyManager) : {};
 

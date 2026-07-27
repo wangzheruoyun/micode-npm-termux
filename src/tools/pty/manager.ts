@@ -1,19 +1,17 @@
 // src/tools/pty/manager.ts
 import { extractErrorMessage } from "@/utils/errors";
 import { createRingBuffer } from "./buffer";
-import type { PTYSession, PTYSessionInfo, ReadResult, SearchResult, SpawnOptions } from "./types";
+import type { PTYSession, PTYSessionInfo, ReadResult, SearchResult, SpawnOptions, IPty } from "./types";
 
-// bun-pty types used locally - the actual module is injected via init()
-type IPty = import("bun-pty").IPty;
-type Spawner = typeof import("bun-pty").spawn;
+type Spawner = typeof import("zigpty").spawn;
 
 const ID_RANDOM_BYTES = 4;
 const HEX_RADIX = 16;
 const ID_SUFFIX_LENGTH = -4;
 const PTY_UNAVAILABLE_MSG =
-  "PTY unavailable: bun-pty native library could not be loaded. " +
-  "Set BUN_PTY_LIB environment variable to the path of the native library " +
-  "(e.g., .opencode/node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib)";
+  "PTY unavailable: zigpty native library could not be loaded. " +
+  "Set ZIGPTY_LIB environment variable to the path of the native library " +
+  "(e.g., .opencode/node_modules/zigpty/zigpty.node)";
 
 export interface PTYManager {
   init(fn: Spawner): void;
@@ -87,7 +85,7 @@ function createSession(id: string, opts: SpawnOptions, args: string[], workdir: 
     process: ptyProcess,
   };
 
-  ptyProcess.onData((data: string) => buffer.append(data));
+  ptyProcess.onData((data: string | Buffer) => buffer.append(data.toString()));
   ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
     if (session.status === "running") {
       session.status = "exited";

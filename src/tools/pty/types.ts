@@ -3,6 +3,17 @@ import type { RingBuffer } from "./buffer"; // now a ReturnType alias
 
 export type PTYStatus = "running" | "exited" | "killed";
 
+// Pty interface matching zigpty's BasePty class
+export interface IPty {
+  readonly pid: number;
+  readonly process: string;
+  write(data: string): void;
+  onData(listener: (data: string | Buffer) => void): void;
+  onExit(listener: (info: { exitCode: number; signal: number }) => void): void;
+  resize(cols: number, rows: number): void;
+  kill(): void;
+}
+
 export interface PTYSession {
   readonly id: string;
   readonly title: string;
@@ -16,7 +27,7 @@ export interface PTYSession {
   readonly createdAt: Date;
   readonly parentSessionId: string;
   readonly buffer: RingBuffer;
-  readonly process: import("bun-pty").IPty;
+  readonly process: IPty;
 }
 
 export interface PTYSessionInfo {

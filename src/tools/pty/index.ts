@@ -2,7 +2,7 @@
 
 export { createRingBuffer, type RingBuffer } from "./buffer";
 export { createPTYManager, type PTYManager } from "./manager";
-export { getBunPtyLoadError, isBunPtyAvailable, loadBunPty } from "./pty-loader";
+export { getZigPtyLoadError, isZigPtyAvailable, loadZigPty } from "./pty-loader";
 export { createPtyKillTool } from "./tools/kill";
 export { createPtyListTool } from "./tools/list";
 export { createPtyReadTool } from "./tools/read";
