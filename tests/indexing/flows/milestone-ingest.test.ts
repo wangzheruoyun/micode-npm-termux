@@ -7,9 +7,7 @@ import { join } from "node:path";
 import { ingestMilestoneArtifact } from "../../../src/indexing/milestone-artifact-ingest";
 import { createArtifactIndex } from "../../../src/tools/artifact-index";
 
-// SKIP: FTS5 not available in sql.js WASM build (requires custom build with FTS5 extension)
-// These tests work with better-sqlite3 which has FTS5 built-in
-describe.skip("milestone artifact ingest", () => {
+describe("milestone artifact ingest", () => {
   let testDir: string;
 
   beforeEach(() => {

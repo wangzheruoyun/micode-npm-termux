@@ -2,12 +2,40 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import initSqlJs, { Database, SqlJsStatic } from "fts5-sql-bundle";
+import * as fts5 from "fts5-sql-bundle";
+const initSqlJs = fts5.initSqlJs || fts5.default;
 
 const DEFAULT_DB_DIR = join(homedir(), ".config", "opencode", "artifact-index");
 const DB_NAME = "context.db";
 const ERR_DB_NOT_INITIALIZED = "Database not initialized";
 const DEFAULT_SEARCH_LIMIT = 10;
+
+interface SqlJsStatic {
+  Database: new (data?: Uint8Array) => Database;
+}
+
+interface Database {
+  run(sql: string, params?: any[]): void;
+  exec(sql: string): Array<{ columns: string[]; values: unknown[][] }>;
+  prepare(sql: string): Statement;
+  export(): Uint8Array;
+  close(): void;
+  getRowsModified(): number;
+  create_function(name: string, func: Function): void;
+  create_aggregate(name: string, funcs: { step: Function; finalize: Function }): void;
+}
+
+interface Statement {
+  bind(params?: any[]): boolean;
+  step(): boolean;
+  get(params?: any[]): any[];
+  getColumnNames(): string[];
+  getAsObject(params?: any[]): any;
+  run(params?: any[]): void;
+  reset(): void;
+  freemem(): void;
+  free(): void;
+}
 
 let sqlPromise: Promise<SqlJsStatic> | null = null;
 
@@ -105,7 +133,6 @@ function escapeFtsQuery(query: string): string {
     .replace(/['"]/g, "")
     .split(/\s+/)
     .filter((term) => term.length > 0)
-    .map((term) => `"${term}"`)
     .join(" OR ");
 }
 
@@ -204,7 +231,7 @@ function searchPlans(db: Database, escapedQuery: string, limit: number): SearchR
   const row = stmt.get();
   stmt.free();
 
-  if (!row) return [];
+  if (!row || row[0] == null) return [];
 
   return [{
     type: "plan" as const,
@@ -228,7 +255,7 @@ function searchLedgers(db: Database, escapedQuery: string, limit: number): Searc
   const row = stmt.get();
   stmt.free();
 
-  if (!row) return [];
+  if (!row || row[0] == null) return [];
 
   return [{
     type: "ledger" as const,
@@ -285,22 +312,27 @@ function searchMilestoneArtifactsInDb(
 
   const stmt = db.prepare(query);
   stmt.bind(params);
-  const row = stmt.get();
+  const rows: any[] = [];
+  while (stmt.step()) {
+    rows.push(stmt.get());
+  }
   stmt.free();
 
-  if (!row) return [];
+  if (rows.length === 0) return [];
 
-  return [{
-    type: "milestone" as const,
-    id: row[0] as string,
-    milestoneId: row[1] as string,
-    artifactType: row[2] as string,
-    sourceSessionId: row[3] as string | undefined,
-    createdAt: row[4] as string | undefined,
-    tags: row[5] ? (JSON.parse(row[5] as string) as string[]) : [],
-    payload: row[6] as string,
-    score: -(row[7] as number),
-  }];
+  return rows
+    .filter((row) => row[0] != null)
+    .map((row) => ({
+      type: "milestone" as const,
+      id: row[0] as string,
+      milestoneId: row[1] as string,
+      artifactType: row[2] as string,
+      sourceSessionId: row[3] as string | undefined,
+      createdAt: row[4] as string | undefined,
+      tags: row[5] ? (JSON.parse(row[5] as string) as string[]) : [],
+      payload: row[6] as string,
+      score: -(row[7] as number),
+    }));
 }
 
 function indexMilestoneArtifactInDb(db: Database, record: MilestoneArtifactRecord): void {
@@ -386,6 +418,7 @@ export async function createArtifactIndex(dbDir: string = DEFAULT_DB_DIR): Promi
       schema = getInlineSchema();
     }
     db.exec(schema);
+    saveDb(db!, dbPath);
   }
 
   return {
@@ -403,22 +436,22 @@ export async function createArtifactIndex(dbDir: string = DEFAULT_DB_DIR): Promi
     async search(query: string, limit: number = DEFAULT_SEARCH_LIMIT): Promise<SearchResult[]> {
       const escapedQuery = escapeFtsQuery(query);
       const results = [
-        ...searchPlans(requireDb(db), escapedQuery, limit),
-        ...searchLedgers(requireDb(db), escapedQuery, limit),
+        ...searchPlans(db!, escapedQuery, limit),
+        ...searchLedgers(db!, escapedQuery, limit),
       ];
       results.sort((a, b) => b.score - a.score);
       return results.slice(0, limit);
     },
     async indexMilestoneArtifact(record: MilestoneArtifactRecord): Promise<void> {
-      indexMilestoneArtifactInDb(requireDb(db), record);
-      saveDb(requireDb(db), dbPath);
+      indexMilestoneArtifactInDb(db!, record);
+      saveDb(db!, dbPath);
     },
     async searchMilestoneArtifacts(
       query: string,
       options: { milestoneId?: string; artifactType?: string; limit?: number } = {},
     ): Promise<MilestoneArtifactSearchResult[]> {
       return searchMilestoneArtifactsInDb(
-        requireDb(db),
+        db!,
         escapeFtsQuery(query),
         options.milestoneId ?? null,
         options.artifactType ?? null,

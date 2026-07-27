@@ -1,4 +1,3 @@
-// SKIP: Requires FTS5 which is not available in sql.js WASM build
 // tests/indexing/flows/milestone-error-paths.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, rmSync } from "node:fs";
@@ -9,7 +8,7 @@ import { MILESTONE_ARTIFACT_TYPES } from "../../../src/indexing/milestone-artifa
 import { ingestMilestoneArtifact } from "../../../src/indexing/milestone-artifact-ingest";
 import { createArtifactIndex } from "../../../src/tools/artifact-index";
 
-describe.skip("milestone artifact ingest error paths", () => {
+describe("milestone artifact ingest error paths", () => {
   let testDir: string;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 

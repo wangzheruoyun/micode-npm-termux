@@ -4,9 +4,7 @@ import { mkdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// SKIP: FTS5 not available in sql.js WASM build (requires custom build with FTS5 extension)
-// These tests work with better-sqlite3 which has FTS5 built-in
-describe.skip("ArtifactIndex", () => {
+describe("ArtifactIndex", () => {
   let testDir: string;
 
   beforeEach(() => {
