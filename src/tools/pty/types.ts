@@ -23,6 +23,7 @@ export interface PTYSession {
   readonly env?: Record<string, string>;
   status: PTYStatus;
   exitCode?: number;
+  signal?: number;
   readonly pid: number;
   readonly createdAt: Date;
   readonly parentSessionId: string;

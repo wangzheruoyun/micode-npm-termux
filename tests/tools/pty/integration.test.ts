@@ -95,7 +95,7 @@ it("should handle Ctrl+C interrupt", async () => {
       const writeResult = await pty_write.execute({ id, data: "\x03" }, mockContext);
       expect(writeResult).toContain("Sent");
 
-      // Wait for process to exit - poll for status change with longer timeout
+      // Wait for process to exit - poll for status change
       let session = manager.get(id);
       let attempts = 0;
       const maxAttempts = 100; // 100 * 200ms = 20 seconds max
@@ -105,7 +105,7 @@ it("should handle Ctrl+C interrupt", async () => {
         attempts++;
       }
 
-      // Session should have exited
+      // Session should have exited (either killed by signal or exited)
       expect(session).toBeDefined();
       expect(["exited", "killed"]).toContain(session!.status);
     }, 25000);

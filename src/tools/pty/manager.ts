@@ -86,10 +86,11 @@ function createSession(id: string, opts: SpawnOptions, args: string[], workdir: 
   };
 
   ptyProcess.onData((data: string | Buffer) => buffer.append(data.toString()));
-  ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
+  ptyProcess.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
     if (session.status === "running") {
-      session.status = "exited";
+      session.status = signal ? "killed" : "exited";
       session.exitCode = exitCode;
+      session.signal = signal;
     }
   });
 
