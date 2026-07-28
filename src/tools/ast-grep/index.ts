@@ -3,16 +3,40 @@ import { spawn } from "node:child_process";
 import * as v from "valibot";
 
 /**
- * Check if ast-grep CLI (sg) is available on the system.
+ * Check if ast-grep CLI (ast-grep) is available on the system.
  * Returns installation instructions if not found.
  */
 export async function checkAstGrepAvailable(): Promise<{ available: boolean; message?: string }> {
   try {
-    // Use which command to check if sg exists
+    // Use which command to check if ast-grep exists
     const { spawnSync } = await import("node:child_process");
-    const result = spawnSync("which", ["sg"], { stdio: "pipe" });
+    
+    // First try the standard which command
+    let result = spawnSync("which", ["ast-grep"], { stdio: "pipe" });
     if (result.status === 0 && result.stdout.toString().trim()) {
       return { available: true };
+    }
+    
+    // Fallback: check common cargo bin locations
+    const homeDir = process.env.HOME || process.env.USERPROFILE;
+    if (homeDir) {
+      const cargoPaths = [
+        `${homeDir}/.cargo/bin/ast-grep`,
+        `/usr/local/bin/ast-grep`,
+        `/opt/homebrew/bin/ast-grep`,
+      ];
+      
+      for (const path of cargoPaths) {
+        try {
+          const { spawnSync } = await import("node:child_process");
+          const result = spawnSync(path, ["--version"], { stdio: "pipe" });
+          if (result.status === 0) {
+            return { available: true };
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
   } catch {
     // which command failed
@@ -20,11 +44,11 @@ export async function checkAstGrepAvailable(): Promise<{ available: boolean; mes
   return {
     available: false,
     message:
-      "ast-grep CLI (sg) not found. AST-aware search/replace will not work.\n" +
+      "ast-grep CLI not found. AST-aware search/replace will not work.\n" +
       "Install with one of:\n" +
-      "  npm install -g @ast-grep/cli\n" +
       "  cargo install ast-grep --locked\n" +
-      "  brew install ast-grep",
+      "  brew install ast-grep\n" +
+      "  npm install -g @ast-grep/cli",
   };
 }
 
@@ -102,7 +126,7 @@ function parseMatchOutput(stdout: string): SgResult {
 
 async function runSg(args: string[]): Promise<SgResult> {
   try {
-    const proc = spawn("sg", args, {
+    const proc = spawn("ast-grep", args, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 

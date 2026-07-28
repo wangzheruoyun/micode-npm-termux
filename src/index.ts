@@ -24,9 +24,8 @@ import {
   artifact_search,
   ast_grep_replace,
   ast_grep_search,
-  btca_ask,
   checkAstGrepAvailable,
-  checkBtcaAvailable,
+  checkSeekAvailable,
   createBatchReadTool,
   createMindmodelLookupTool,
   createOcttoTools,
@@ -37,6 +36,7 @@ import {
   loadZigPty,
   look_at,
   milestone_artifact_search,
+  seek_ask,
 } from "@/tools";
 import { config } from "@/utils/config";
 import { extractErrorMessage } from "@/utils/errors";
@@ -109,15 +109,21 @@ function extractTextFromParts(parts: Array<{ type: string; text?: string }>): st
 
 // eslint-disable-next-line max-lines-per-function
 const OpenCodeConfigPlugin: Plugin = async (ctx) => {
+  // Add cargo bin to PATH for tools like ast-grep
+  const cargoBin = `${process.env.HOME}/.cargo/bin`;
+  if (!process.env.PATH?.includes(cargoBin)) {
+    process.env.PATH = `${process.env.PATH}:${cargoBin}`;
+  }
+
   // Validate external tool dependencies at startup
   const astGrepStatus = await checkAstGrepAvailable();
   if (!astGrepStatus.available) {
     log.warn("micode", astGrepStatus.message ?? "ast-grep unavailable");
   }
 
-  const btcaStatus = await checkBtcaAvailable();
-  if (!btcaStatus.available) {
-    log.warn("micode", btcaStatus.message ?? "btca unavailable");
+  const seekStatus = await checkSeekAvailable();
+  if (!seekStatus.available) {
+    log.warn("micode", seekStatus.message ?? "seek unavailable");
   }
 
   // Load user config for agent overrides and feature flags
@@ -276,7 +282,7 @@ const OpenCodeConfigPlugin: Plugin = async (ctx) => {
     tool: {
       ast_grep_search,
       ast_grep_replace,
-      btca_ask,
+      seek_ask,
       look_at,
       artifact_search,
       milestone_artifact_search,

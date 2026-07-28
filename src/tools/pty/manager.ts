@@ -22,6 +22,7 @@ export interface PTYManager {
   search(id: string, pattern: RegExp, offset?: number, limit?: number): SearchResult | null;
   list(): PTYSessionInfo[];
   get(id: string): PTYSessionInfo | null;
+  getSession(id: string): PTYSession | undefined;
   kill(id: string, cleanup?: boolean): boolean;
   cleanupBySession(parentSessionId: string): void;
   cleanupAll(): void;
@@ -103,7 +104,8 @@ function killSession(sessions: Map<string, PTYSession>, id: string, cleanup: boo
 
   if (session.status === "running") {
     try {
-      session.process.kill();
+      // Send SIGKILL to ensure the process is terminated
+      session.process.kill("SIGKILL");
     } catch {
       // Process may already be dead
     }
@@ -192,6 +194,9 @@ export function createPTYManager(): PTYManager {
     get: (id: string): PTYSessionInfo | null => {
       const s = sessions.get(id);
       return s ? toInfo(s) : null;
+    },
+    getSession: (id: string): PTYSession | undefined => {
+      return sessions.get(id);
     },
     kill: (id: string, cleanup = false): boolean => killSession(sessions, id, cleanup),
     cleanupBySession: (parentSessionId: string): void => cleanupByParent(sessions, parentSessionId),

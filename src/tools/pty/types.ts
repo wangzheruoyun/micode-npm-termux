@@ -9,9 +9,9 @@ export interface IPty {
   readonly process: string;
   write(data: string): void;
   onData(listener: (data: string | Buffer) => void): void;
-  onExit(listener: (info: { exitCode: number; signal: number }) => void): void;
+  onExit(listener: (info: { exitCode: number; signal?: number }) => void): void;
   resize(cols: number, rows: number): void;
-  kill(): void;
+  kill(signal?: string): void;
 }
 
 export interface PTYSession {

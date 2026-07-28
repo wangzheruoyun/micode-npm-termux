@@ -63,6 +63,8 @@ function parseEscapeSequences(input: string): string {
 
 const MAX_WRITE_PREVIEW_LENGTH = 50;
 
+const CTRL_C = "\x03";
+
 export function createPtyWriteTool(manager: PTYManager): ToolDefinition {
   return tool({
     description: DESCRIPTION,
@@ -71,7 +73,7 @@ export function createPtyWriteTool(manager: PTYManager): ToolDefinition {
       data: tool.schema.string().describe("The input data to send to the PTY"),
     },
     execute: async (args) => {
-      const session = manager.get(args.id);
+      const session = manager.getSession(args.id);
       if (!session) {
         throw new Error(`PTY session '${args.id}' not found. Use pty_list to see active sessions.`);
       }
@@ -82,6 +84,19 @@ export function createPtyWriteTool(manager: PTYManager): ToolDefinition {
 
       // Parse escape sequences to actual bytes
       const parsedData = parseEscapeSequences(args.data);
+
+      // Handle Ctrl+C (SIGINT) specially - send SIGINT to process group instead of writing raw byte
+      if (parsedData === CTRL_C) {
+        if (session.process && typeof session.process.kill === "function") {
+          try {
+            session.process.kill("SIGINT");
+          } catch {
+            // Ignore errors - process may already be dead
+          }
+        }
+        const displayPreview = "^C";
+        return `Sent Ctrl+C (SIGINT) to ${args.id}`;
+      }
 
       const success = manager.write(args.id, parsedData);
       if (!success) {
