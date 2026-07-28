@@ -1,12 +1,11 @@
-// SKIP: Requires bun-pty with bun:ffi (Bun-specific native API) - skipping on Node.js
 // tests/tools/pty/manager.test.ts
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { spawn } from "bun-pty";
+import { spawn } from "zigpty";
 
 import { createPTYManager, type PTYManager } from "../../../src/tools/pty/manager";
 
-describe.skip("PTYManager", () => {
+describe("PTYManager", () => {
   let manager: PTYManager;
 
   beforeEach(() => {
@@ -54,13 +53,17 @@ describe.skip("PTYManager", () => {
       expect(info.title).toBe("Dev Server");
     });
 
-    it("should throw descriptive error when command not found", () => {
-      expect(() => {
-        manager.spawn({
-          command: "nonexistent_command_xyz_12345",
-          parentSessionId: "test-session",
-        });
-      }).toThrow(/Failed to spawn PTY.*nonexistent_command_xyz_12345/);
+    it("should handle command not found gracefully", async () => {
+      const info = manager.spawn({
+        command: "nonexistent_command_xyz_12345",
+        parentSessionId: "test-session",
+      });
+
+      // Wait for the process to exit
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const updated = manager.get(info.id);
+      expect(updated?.status).toBe("exited");
+      expect(updated?.exitCode).toBeGreaterThan(0);
     });
 
     // Note: bun-pty does not throw for invalid workdir - it silently uses cwd instead

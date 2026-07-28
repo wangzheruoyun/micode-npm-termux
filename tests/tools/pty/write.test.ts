@@ -2,13 +2,13 @@
 // tests/tools/pty/write.test.ts
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { spawn } from "bun-pty";
+import { spawn } from "zigpty";
 
 import { createPTYManager, type PTYManager } from "../../../src/tools/pty/manager";
 import { createPtySpawnTool } from "../../../src/tools/pty/tools/spawn";
 import { createPtyWriteTool } from "../../../src/tools/pty/tools/write";
 
-describe.skip("pty_write tool", () => {
+describe("pty_write tool", () => {
   let manager: PTYManager;
   let pty_write: ReturnType<typeof createPtyWriteTool>;
   let pty_spawn: ReturnType<typeof createPtySpawnTool>;

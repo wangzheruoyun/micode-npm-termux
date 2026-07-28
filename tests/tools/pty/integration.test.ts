@@ -2,7 +2,7 @@
 // tests/tools/pty/integration.test.ts
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { spawn } from "bun-pty";
+import { spawn } from "zigpty";
 
 import { createPTYManager, type PTYManager } from "../../../src/tools/pty/manager";
 import { createPtyKillTool } from "../../../src/tools/pty/tools/kill";
@@ -10,7 +10,7 @@ import { createPtyReadTool } from "../../../src/tools/pty/tools/read";
 import { createPtySpawnTool } from "../../../src/tools/pty/tools/spawn";
 import { createPtyWriteTool } from "../../../src/tools/pty/tools/write";
 
-describe.skip("PTY Integration", () => {
+describe("PTY Integration", () => {
   let manager: PTYManager;
   let pty_spawn: ReturnType<typeof createPtySpawnTool>;
   let pty_write: ReturnType<typeof createPtyWriteTool>;
@@ -87,22 +87,28 @@ describe.skip("PTY Integration", () => {
       await pty_kill.execute({ id }, mockContext);
     });
 
-    it("should handle Ctrl+C interrupt", async () => {
+it("should handle Ctrl+C interrupt", async () => {
       const spawnResult = await pty_spawn.execute({ command: "cat", description: "Interrupt test" }, mockContext);
       const id = extractId(spawnResult);
 
       // Send Ctrl+C
-      const writeResult = await pty_write.execute({ id, data: "\\x03" }, mockContext);
+      const writeResult = await pty_write.execute({ id, data: "\x03" }, mockContext);
       expect(writeResult).toContain("Sent");
 
-      // Wait for process to exit
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for process to exit - poll for status change with longer timeout
+      let session = manager.get(id);
+      let attempts = 0;
+      const maxAttempts = 100; // 100 * 200ms = 20 seconds max
+      while (session && session.status === "running" && attempts < 100) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        session = manager.get(id);
+        attempts++;
+      }
 
       // Session should have exited
-      const session = manager.get(id);
       expect(session).toBeDefined();
       expect(["exited", "killed"]).toContain(session!.status);
-    });
+    }, 25000);
   });
 
   describe("error handling", () => {

@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { createRingBuffer } from "../../../src/tools/pty/buffer";
 
-describe.skip("RingBuffer", () => {
+describe("RingBuffer", () => {
   describe("append", () => {
     it("should store appended lines", () => {
       const buffer = createRingBuffer(100);
