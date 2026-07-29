@@ -61,6 +61,6 @@
     "eslint-plugin-unicorn": "^64.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.57.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.10"
   }
 }
