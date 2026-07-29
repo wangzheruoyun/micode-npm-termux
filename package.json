@@ -43,7 +43,7 @@
     "url": "https://github.com/vtemian/micode/issues"
   },
 "dependencies": {
-    "@opencode-ai/plugin": "1.14.19",
+    "@opencode-ai/plugin": "1.18.9",
     "fts5-sql-bundle": "^1.0.0",
     "jsonc-parser": "^3.3.1",
     "valibot": "^1.2.0",
