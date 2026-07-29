@@ -110,9 +110,18 @@ function extractTextFromParts(parts: Array<{ type: string; text?: string }>): st
 // eslint-disable-next-line max-lines-per-function
 const OpenCodeConfigPlugin: Plugin = async (ctx) => {
   // Add cargo bin to PATH for tools like ast-grep
-  const cargoBin = `${process.env.HOME}/.cargo/bin`;
-  if (!process.env.PATH?.includes(cargoBin)) {
-    process.env.PATH = `${process.env.PATH}:${cargoBin}`;
+  const homeDir = process.env.HOME || process.env.USERPROFILE || "/data/data/com.termux/files/home";
+  const cargoBin = `${homeDir}/.cargo/bin`;
+  const currentPath = process.env.PATH || "/data/data/com.termux/files/usr/bin";
+  // Ensure user paths are in PATH for tools like ast-grep and seek
+  const userPaths = [
+    `${homeDir}/.local/bin`,
+    `${homeDir}/.cargo/bin`,
+    "/usr/local/bin",
+    "/opt/homebrew/bin"
+  ].filter(p => !currentPath.includes(p));
+  if (userPaths.length > 0) {
+    process.env.PATH = `${currentPath}:${userPaths.join(":")}`;
   }
 
   // Validate external tool dependencies at startup

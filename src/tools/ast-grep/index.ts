@@ -7,40 +7,49 @@ import * as v from "valibot";
  * Returns installation instructions if not found.
  */
 export async function checkAstGrepAvailable(): Promise<{ available: boolean; message?: string }> {
+  console.warn("[micode] DEBUG checkAstGrepAvailable: ENTRY");
   try {
-    // Use which command to check if ast-grep exists
     const { spawnSync } = await import("node:child_process");
-    
-    // First try the standard which command
-    let result = spawnSync("which", ["ast-grep"], { stdio: "pipe" });
+
+    console.warn("[micode] DEBUG checkAstGrepAvailable: spawnSync imported");
+    console.warn("[micode] DEBUG checkAstGrepAvailable: PATH=" + process.env.PATH + " HOME=" + process.env.HOME);
+    // First try shell's built-in command -v (works on all POSIX shells including Termux)
+    console.warn("[micode] DEBUG: About to call spawnSync for command -v");
+    let result = spawnSync("sh", ["-c", "command -v ast-grep"], { stdio: "pipe" });
+    console.warn("[micode] DEBUG checkAstGrepAvailable RESULT: status=" + result.status + " stdout=" + result.stdout.toString().trim() + " stderr=" + result.stderr.toString().trim());
     if (result.status === 0 && result.stdout.toString().trim()) {
       return { available: true };
     }
     
+    console.warn("[micode] DEBUG: command -v failed, trying fallback paths");
     // Fallback: check common cargo bin locations
-    const homeDir = process.env.HOME || process.env.USERPROFILE;
-    if (homeDir) {
-      const cargoPaths = [
-        `${homeDir}/.cargo/bin/ast-grep`,
-        `/usr/local/bin/ast-grep`,
-        `/opt/homebrew/bin/ast-grep`,
-      ];
-      
-      for (const path of cargoPaths) {
-        try {
-          const { spawnSync } = await import("node:child_process");
-          const result = spawnSync(path, ["--version"], { stdio: "pipe" });
-          if (result.status === 0) {
-            return { available: true };
-          }
-        } catch {
-          // ignore
+    const homeDir = process.env.HOME || process.env.USERPROFILE || "/data/data/com.termux/files/home";
+    console.warn("[micode] DEBUG: homeDir = " + homeDir);
+    const cargoPaths = [
+      `${homeDir}/.cargo/bin/ast-grep`,
+      `/usr/local/bin/ast-grep`,
+      `/opt/homebrew/bin/ast-grep`,
+    ];
+    
+    for (const path of cargoPaths) {
+      console.warn("[micode] DEBUG: Trying fallback path: " + path);
+      try {
+        const { spawnSync } = await import("node:child_process");
+        const result = spawnSync(path, ["--version"], { stdio: "pipe" });
+        console.warn("[micode] DEBUG: Fallback path " + path + " result: status=" + result.status);
+        if (result.status === 0) {
+          return { available: true };
         }
+      } catch (e) {
+        console.warn("[micode] DEBUG: Fallback path " + path + " error: " + e);
       }
     }
-  } catch {
-    // which command failed
+    console.warn("[micode] DEBUG: All fallback paths failed");
+  } catch (e) {
+    console.warn("[micode] DEBUG checkAstGrepAvailable ERROR: " + e);
+    // command check failed
   }
+  console.warn("[micode] DEBUG checkAstGrepAvailable: Returning available=false");
   return {
     available: false,
     message:
