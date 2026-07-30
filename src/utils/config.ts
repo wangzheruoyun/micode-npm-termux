@@ -45,7 +45,7 @@ export const config = {
     /** Characters per token for estimation */
     charsPerToken: 4,
     /** Default context window limit (tokens) */
-    defaultContextLimit: 200_000,
+    defaultContextLimit: 970_000,
     /** Default max output tokens */
     defaultMaxOutputTokens: 50_000,
     /** Safety margin for output (ratio of remaining context) */

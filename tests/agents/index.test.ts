@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MODEL } from "../../src/utils/config";
-
 describe("agents index", () => {
   it("should not export handoff agents", async () => {
     const module = await import("../../src/agents/index");
@@ -49,15 +47,17 @@ describe("agents index", () => {
     for (const agentName of v2Agents) {
       const agent = module.agents[agentName];
       expect(agent.mode).toBe("subagent");
-      expect(agent.model).toBe(DEFAULT_MODEL);
+      // Agents should NOT have hardcoded model - they should inherit user's model
+      expect(agent.model).toBeUndefined();
     }
   });
 
-  it("should use DEFAULT_MODEL for all agents", async () => {
+  it("should NOT have hardcoded models for any agents", async () => {
     const module = await import("../../src/agents/index");
 
     for (const [_name, agent] of Object.entries(module.agents)) {
-      expect(agent.model).toBe(DEFAULT_MODEL);
+      // Agents should NOT have hardcoded models - they inherit user's model
+      expect(agent.model).toBeUndefined();
     }
   });
 });

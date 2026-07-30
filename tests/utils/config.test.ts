@@ -44,7 +44,7 @@ describe("config utility", () => {
 
     it("should have defaultContextLimit", async () => {
       const { config } = await import("../../src/utils/config");
-      expect(config.tokens.defaultContextLimit).toBe(200_000);
+      expect(config.tokens.defaultContextLimit).toBe(970_000);
     });
 
     it("should have defaultMaxOutputTokens", async () => {

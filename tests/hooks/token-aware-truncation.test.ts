@@ -45,7 +45,7 @@ describe("token-aware-truncation", () => {
                 {
                   info: {
                     role: "assistant",
-                    usage: { inputTokens: 190_000, cacheReadInputTokens: 0 },
+                    usage: { inputTokens: 600_000, cacheReadInputTokens: 0 },
                   },
                 },
               ],
@@ -57,7 +57,7 @@ describe("token-aware-truncation", () => {
       const hook = createTokenAwareTruncationHook(ctx);
 
       // Generate large output (many lines)
-      const lines = Array.from({ length: 5000 }, (_, i) => `line ${i}: some content here that takes up space`);
+      const lines = Array.from({ length: 25000 }, (_, i) => `line ${i}: some content here that takes up space`);
       const output = { output: lines.join("\n") };
 
       await hook["tool.execute.after"]({ name: "grep", sessionID: "s1" }, output);
@@ -76,7 +76,7 @@ describe("token-aware-truncation", () => {
                 {
                   info: {
                     role: "assistant",
-                    usage: { inputTokens: 190_000, cacheReadInputTokens: 0 },
+                    usage: { inputTokens: 600_000, cacheReadInputTokens: 0 },
                   },
                 },
               ],
@@ -86,7 +86,7 @@ describe("token-aware-truncation", () => {
       });
 
       const hook = createTokenAwareTruncationHook(ctx);
-      const lines = Array.from({ length: 5000 }, (_, i) => `match ${i}`);
+      const lines = Array.from({ length: 25000 }, (_, i) => `match ${i}`);
       const output = { output: lines.join("\n") };
 
       await hook["tool.execute.after"]({ name: "Grep", sessionID: "s1" }, output);
@@ -103,7 +103,7 @@ describe("token-aware-truncation", () => {
                 {
                   info: {
                     role: "assistant",
-                    usage: { inputTokens: 190_000, cacheReadInputTokens: 0 },
+                    usage: { inputTokens: 600_000, cacheReadInputTokens: 0 },
                   },
                 },
               ],
@@ -113,7 +113,7 @@ describe("token-aware-truncation", () => {
       });
 
       const hook = createTokenAwareTruncationHook(ctx);
-      const lines = Array.from({ length: 5000 }, (_, i) => `/path/to/file${i}.ts`);
+      const lines = Array.from({ length: 25000 }, (_, i) => `/path/to/file${i}.ts`);
       const output = { output: lines.join("\n") };
 
       await hook["tool.execute.after"]({ name: "glob", sessionID: "s1" }, output);
@@ -169,7 +169,7 @@ describe("token-aware-truncation", () => {
                 {
                   info: {
                     role: "assistant",
-                    usage: { inputTokens: 190_000, cacheReadInputTokens: 0 },
+                    usage: { inputTokens: 600_000, cacheReadInputTokens: 0 },
                   },
                 },
               ],
@@ -183,7 +183,7 @@ describe("token-aware-truncation", () => {
       const headerLine1 = "Results from search:";
       const headerLine2 = "Pattern: foo";
       const headerLine3 = "Directory: /src";
-      const contentLines = Array.from({ length: 5000 }, (_, i) => `  ${i}: match found in file${i}.ts`);
+      const contentLines = Array.from({ length: 25000 }, (_, i) => `  ${i}: match found in file${i}.ts`);
       const fullOutput = [headerLine1, headerLine2, headerLine3, ...contentLines].join("\n");
       const output = { output: fullOutput };
 
@@ -196,7 +196,7 @@ describe("token-aware-truncation", () => {
     });
 
     it("should suppress output entirely when context is exhausted", async () => {
-      const ctx = createMockCtx({
+const ctx = createMockCtx({
         client: {
           session: {
             messages: async () => ({
@@ -204,7 +204,7 @@ describe("token-aware-truncation", () => {
                 {
                   info: {
                     role: "assistant",
-                    usage: { inputTokens: 200_000, cacheReadInputTokens: 0 },
+                    usage: { inputTokens: 1_000_000, cacheReadInputTokens: 0 },
                   },
                 },
               ],

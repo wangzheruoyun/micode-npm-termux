@@ -24,7 +24,8 @@ describe("config-loader integration", () => {
 
     for (const agentName of expectedAgents) {
       expect(agents[agentName]).toBeDefined();
-      expect(agents[agentName].model).toBeDefined();
+      // Agents should NOT have hardcoded models - they inherit user's model
+      expect(agents[agentName].model).toBeUndefined();
     }
   });
 
@@ -47,8 +48,11 @@ describe("config-loader integration", () => {
     // Original prompt should be preserved
     expect(merged["mm-orchestrator"].prompt).toBeDefined();
 
-    // Check other agents still have defaults
-    expect(merged.commander.model).toBe(DEFAULT_MODEL);
+    // Check other agents - user overrides should work
+    expect(merged["ledger-creator"].model).toBe("openai/gpt-4o");
+    expect(merged["artifact-searcher"].model).toBe("openai/gpt-4o");
+    // Agents without user override should not have hardcoded models
+    expect(merged["commander"].model).toBeUndefined();
   });
 
   it("should preserve all agent properties when merging", () => {
