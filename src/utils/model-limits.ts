@@ -20,7 +20,7 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   gemini: 1_000_000,
 };
 
-export const DEFAULT_CONTEXT_LIMIT = 200_000;
+export const DEFAULT_CONTEXT_LIMIT = 970_000;
 
 /**
  * Get the context window limit for a given model.

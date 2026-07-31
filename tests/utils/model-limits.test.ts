@@ -84,8 +84,8 @@ describe("model-limits", () => {
   });
 
   describe("DEFAULT_CONTEXT_LIMIT", () => {
-    it("should be 200_000", () => {
-      expect(DEFAULT_CONTEXT_LIMIT).toBe(200_000);
+    it("should be 970_000", () => {
+      expect(DEFAULT_CONTEXT_LIMIT).toBe(970_000);
     });
   });
 });
