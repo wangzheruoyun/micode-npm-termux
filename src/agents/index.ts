@@ -8,6 +8,7 @@ import { codebaseLocatorAgent } from "./codebase-locator";
 import { PRIMARY_AGENT_NAME, primaryAgent } from "./commander";
 import { executorAgent } from "./executor";
 import { implementerAgent } from "./implementer";
+import { lAgent } from "./l";
 import { ledgerCreatorAgent } from "./ledger-creator";
 import {
   antiPatternDetectorAgent,
@@ -45,6 +46,7 @@ export const agents: Record<string, AgentConfig> = {
   "project-initializer": projectInitializerAgent,
   octto: octtoAgent,
   probe: probeAgent,
+  l: lAgent,
   // Mindmodel generation agents
   "mm-stack-detector": stackDetectorAgent,
   "mm-pattern-discoverer": mindmodelPatternDiscovererAgent,
@@ -76,4 +78,5 @@ export {
   artifactSearcherAgent,
   octtoAgent,
   probeAgent,
+  lAgent,
 };
